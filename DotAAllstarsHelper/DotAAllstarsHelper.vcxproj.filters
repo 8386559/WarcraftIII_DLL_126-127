@@ -48,9 +48,6 @@
     <ClCompile Include="DotaErrorHandler.cpp">
       <Filter>Src</Filter>
     </ClCompile>
-    <ClCompile Include="blpaletter.cpp">
-      <Filter>Src</Filter>
-    </ClCompile>
     <ClCompile Include="quantizer.cpp">
       <Filter>Src</Filter>
     </ClCompile>
@@ -63,19 +60,10 @@
     <ClCompile Include="DotaFOVfix.cpp">
       <Filter>Src</Filter>
     </ClCompile>
-    <ClCompile Include="HttpClass.cpp">
-      <Filter>Src</Filter>
-    </ClCompile>
-    <ClCompile Include="SendGamePacket.cpp">
-      <Filter>Src</Filter>
-    </ClCompile>
     <ClCompile Include="DotaAutoFPSlimit.cpp">
       <Filter>Src</Filter>
     </ClCompile>
     <ClCompile Include="DotaCustomFrames.cpp">
-      <Filter>Src</Filter>
-    </ClCompile>
-    <ClCompile Include="Jpeg.cpp">
       <Filter>Src</Filter>
     </ClCompile>
     <ClCompile Include="DotaHelperOverlayDirectx8.cpp">
@@ -94,6 +82,24 @@
       <Filter>Src</Filter>
     </ClCompile>
     <ClCompile Include="DotaSyncScanner.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="Storm.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="DotaFrameDefHelper.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="WarcraftFrameHelper.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="BlpReadWrite.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="DotaHttpHelper.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="MegaPacketHandler.cpp">
       <Filter>Src</Filter>
     </ClCompile>
   </ItemGroup>
@@ -118,9 +124,6 @@
     <ClInclude Include="resource.h">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="blpaletter.h">
-      <Filter>Headers</Filter>
-    </ClInclude>
     <ClInclude Include="buffer.h">
       <Filter>Headers</Filter>
     </ClInclude>
@@ -136,10 +139,28 @@
     <ClInclude Include="HttpClass.h">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="Jpeg.h">
+    <ClInclude Include="Structures.h">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="Structures.h">
+    <ClInclude Include="Storm.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="FunctionTemplate.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="fp_call.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="WarcraftFrameHelper.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="BlpReadWrite.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="WinHttpClient.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="MegaPacketHandler.h">
       <Filter>Headers</Filter>
     </ClInclude>
   </ItemGroup>

@@ -1,5 +1,5 @@
 #include "Main.h"
-#include "blpaletter.h"
+#include "BlpReadWrite.h"
 #include <windows.h>
 #include <string>
 #include <tlhelp32.h>
@@ -54,7 +54,7 @@ void DrawAllRawImages( )
 
 
 
-		Buffer tmpBuf = Buffer( );
+		StormBuffer tmpBuf = StormBuffer( );
 		tmpBuf.Clone( img.img );
 
 
@@ -193,6 +193,7 @@ void DrawOverlayGl( )
 
 void UninitOpenglHook( )
 {
+	if ( wglSwapLayerBuffers_org )
 	MH_DisableHook( wglSwapLayerBuffers_org );
 }
 

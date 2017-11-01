@@ -54,6 +54,16 @@ using namespace std;
 #define MASK_56 (((u_int64_t)1<<56)-1) /* i.e., (u_int64_t)0xffffffffffffff */
 
 #include "fnv.h"
+
+
+#include "Structures.h"
+
+#include "Storm.h"
+
+#include "WarcraftFrameHelper.h"
+
+#include "MegaPacketHandler.h"
+
 #pragma endregion
 
 
@@ -64,7 +74,6 @@ using namespace std;
 
 
 
-#include "Structures.h"
 
 extern BOOL InitFunctionCalled;
 
@@ -72,14 +81,17 @@ extern BOOL TerminateStarted;
 extern BOOL IsVEHex;
 extern BOOL TestModeActivated;
 
+void FrameDefHelperUninitialize( );
+void FrameDefHelperInitialize( );
+
 
 extern int RenderStage;
 
 int GetGlobalClassAddr( );
 BOOL FileExist( const char * name );
 DWORD GetDllCrc32( );
-//typedef void *( __cdecl * _TriggerExecute )( int TriggerHandle );
-//extern _TriggerExecute TriggerExecute;
+typedef void *( __cdecl * _TriggerExecute )( int TriggerHandle );
+extern _TriggerExecute TriggerExecute;
 
 
 
@@ -121,7 +133,7 @@ extern int player_local_id;
 typedef BOOL( __cdecl * pGetPlayerAlliance )( unsigned int hPlayer1, unsigned int hPlayer2, int hAlliancetype );
 extern pGetPlayerAlliance GetPlayerAlliance;
 typedef unsigned int( __cdecl * pGetPlayerColor )( unsigned int whichPlayer );
-extern pGetPlayerColor GetPlayerColor;
+extern pGetPlayerColor GetPlayerColor2;
 typedef int( __cdecl * pPlayer )( int number );
 extern pPlayer _Player;
 int __stdcall Player( int number );
@@ -161,6 +173,7 @@ BOOL __stdcall IsHero( int unitaddr );
 BOOL __stdcall IsTower( int unitaddr );
 BOOL __stdcall IsNotBadUnit( int unitaddr, BOOL onlymem = FALSE );
 BOOL __stdcall IsUnitInvulnerable( int unitaddr );
+BOOL __stdcall IsUnitIllusion( int unitaddr );
 BOOL __stdcall IsNotBadItem( int itemaddr, BOOL extracheck = FALSE );
 typedef int( __fastcall * pGetHeroInt )( int unitaddr, int unused, BOOL withbonus );
 extern pGetHeroInt GetHeroInt;
@@ -186,8 +199,6 @@ PBYTE HookVTableFunction( PDWORD* dwVTable, PBYTE dwHook, INT Index );
 PBYTE GetVTableFunction( PDWORD* dwVTable, INT Index );
 
 int __stdcall SetColorForUnit( unsigned int  * coloraddr, BarStruct * BarStruct );
-typedef void *( __stdcall * Storm_401 )( size_t Size, const char * srcfile, int line, int val );
-extern Storm_401 Storm_401_org;
 #pragma endregion
 
 
@@ -279,7 +290,7 @@ extern int GetItemInSlotAddr;
 extern float * GetWindowXoffset;
 extern float * GetWindowYoffset;
 extern int GameFrameAtMouseStructOffset;
-//extern int pTriggerExecute;
+extern int pTriggerExecute;
 #pragma endregion
 
 
@@ -312,7 +323,11 @@ extern int sub_6F33A010Offset;
 void IssueFixerInit( );
 void IssueFixerDisable( );
 typedef int( __fastcall * c_SimpleButtonClickEvent )( int pButton, int unused, int ClickEventType );
-extern c_SimpleButtonClickEvent SimpleButtonClickEvent;
+int __fastcall SimpleButtonClickEvent_my( int pButton, int unused, int ClickEventType );
+extern c_SimpleButtonClickEvent SimpleButtonClickEvent_org;
+extern c_SimpleButtonClickEvent SimpleButtonClickEvent_ptr;
+extern int CommandButtonVtable;
+extern std::vector<ClickPortrainForId> ClickPortrainForIdList;
 #pragma endregion
 
 
@@ -328,15 +343,10 @@ extern vector<ModelScaleStruct> ModelScaleList;
 extern vector<ICONMDLCACHE> ICONMDLCACHELIST;
 
 extern vector<FileRedirectStruct> FileRedirectList;
-typedef signed int( __stdcall * Storm_403 )( void *a1, const char * str, int line, int id );
-extern Storm_403 Storm_403_org;
 typedef BOOL( __fastcall * GameGetFile )( const char * filename, int * OutDataPointer, size_t * OutSize, BOOL unknown );
 BOOL __fastcall GameGetFile_my( const char * filename, int * OutDataPointer, unsigned int * OutSize, BOOL unknown );
 extern GameGetFile GameGetFile_org, GameGetFile_ptr;
-//int __stdcall Storm_279_my( const char * filename, int arg1, int arg2, size_t arg3, int arg4 );
-//typedef int( __stdcall * Storm_279 )( const char * filename, int, int, size_t, int );
-//extern Storm_279 Storm_279_org;
-//extern Storm_279 Storm_279_ptr;
+
 void FreeAllIHelpers( );
 
 
@@ -365,16 +375,9 @@ extern SetGameAreaFOV SetGameAreaFOV_org, SetGameAreaFOV_ptr;
 
 
 #pragma region DotaWebHelper.cpp
-string SendHttpPostRequest( const char * host, const char * path, const char * data );
+string SendHttpPostRequest( const char * url, const char * data );
 string SendHttpGetRequest( const char * host, const char * path );
 #pragma endregion 
-
-
-#pragma region SendGamePacket.cpp
-extern int PacketClassPtr;
-extern int pGAME_SendPacket;
-void SendPacket( BYTE* packetData, DWORD size );
-#pragma endregion
 
 
 #pragma region DotaAutoFPSlimit.cpp
@@ -468,8 +471,6 @@ typedef int( __cdecl * GetTownUnitCount_p )( int *, int, BOOL );
 int __cdecl Wc3MemoryRW( int * addr, int value, BOOL write );
 extern GetTownUnitCount_p GetTownUnitCount_org;
 extern GetTownUnitCount_p GetTownUnitCount_ptr;
-typedef unsigned int( __stdcall * Ordinal590_p )( unsigned char *a1 );
-extern Ordinal590_p Ordinal590_org;
 int __stdcall GetJassStringCount( BOOL dump );
 int __stdcall ScanJassStringForErrors( BOOL dump );
 #pragma endregion
@@ -485,3 +486,21 @@ extern int ScanId;
 
 
 #pragma endregion
+
+
+
+inline std::string WStringToString( LPCWSTR s )
+{
+	if ( !s )
+		return "";
+	std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+	return converter.to_bytes( s );
+}
+
+inline std::wstring StringToWString( LPCSTR s )
+{
+	if ( !s )
+		return L"";
+	std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+	return converter.from_bytes( s );
+}

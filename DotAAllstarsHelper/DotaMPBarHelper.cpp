@@ -1,5 +1,5 @@
 #include "Main.h"
-
+#include "Storm.h"
 #pragma optimize("",off)
 
 #define ADDRESS LPVOID  // data
@@ -11,7 +11,7 @@ GADDRESS sub_6F6061B0;   // 606860 6f606860
 GADDRESS sub_6F605CC0;   // 606370 6f606370
 GADDRESS sub_6F359CC0;   // 35A740 6f35A740
 GADDRESS sub_6F32C880; // 32D300   6f
-Storm_401 Storm_401_org = NULL; //storm 0x191 #401
+
 GADDRESS sub_6F2C74B0;
 
 ADDRESS a16F08C;
@@ -323,12 +323,13 @@ void __declspec( naked ) FillMemoryForMPBar( )
 
 void __declspec( naked ) ReallocateMemoryForMPBar( )
 {
+	
 	__asm {
 		pop     a16F08C;
 		pop     eax;
 		add     eax, eax;
 		push    eax;
-		call    Storm_401_org;
+		call    Storm::AddrMemAlloc;
 		pushad;
 		pusha;
 		mov     a16F004, eax;
@@ -401,6 +402,7 @@ void __declspec( naked ) f00152710( )
 	}
 }
 
+int MpBarCmpVal = 0;
 
 void __declspec( naked ) f001527F0( )
 {
@@ -410,24 +412,37 @@ void __declspec( naked ) f001527F0( )
 		mov     edi, a16F004;
 		cmp     a3000AC, 0;
 		je L093;
+		cmp     edi, 0;
+		je L093;
 		pushad;
 		pusha;
 		push edi;
 		call IsHero;
-		cmp eax, 0;
+		mov MpBarCmpVal, eax;
 		popa;
 		popad;
+		cmp MpBarCmpVal, 0;
 		je L093;
 		pushad;
 		pusha;
 		push edi;
 		call IsEnemy;
-		cmp eax, 1;
+		mov MpBarCmpVal, eax;
 		popa;
 		popad;
+		cmp MpBarCmpVal, 0;
+		jne L093;
+		cmp MpBarCmpVal, -1;
 		je L093;
-		cmp eax, -1;
-		je L093;
+		pushad;
+		pusha;
+		push edi;
+		call IsUnitIllusion;
+		mov MpBarCmpVal, eax;
+		popa;
+		popad;
+		cmp MpBarCmpVal, 0;
+		jne L093;
 		pushad;
 		pusha;
 		push edi;

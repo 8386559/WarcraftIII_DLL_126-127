@@ -5,6 +5,7 @@
 
 #include <stdint.h>
 #include "Crc32Dynamic.h"
+#include "Storm.h"
 
 BOOL FileExist( const char * name )
 {
@@ -81,7 +82,7 @@ int BlizzardDebug4Offset = 0;
 int BlizzardDebug5Offset = 0;
 int BlizzardDebug6Offset = 0;
 int GameFrameAtMouseStructOffset = 0;
-//int pTriggerExecute = 0;
+int pTriggerExecute = 0;
 int SetGameAreaFOVoffset = 0;
 int GameGetFileOffset = 0;
 
@@ -199,7 +200,7 @@ BOOL ClickHelper = FALSE;
 HMODULE GetCurrentModule;
 
 
-//_TriggerExecute TriggerExecute;
+_TriggerExecute TriggerExecute;
 pExecuteFunc ExecuteFunc;
 
 char CurrentMapPath[ MAX_PATH ];
@@ -404,9 +405,6 @@ void InitHook( )
 	MH_CreateHook( GameGetFile_org, &GameGetFile_my, reinterpret_cast< void** >( &GameGetFile_ptr ) );
 	MH_EnableHook( GameGetFile_org );
 
-	//MH_CreateHook( Storm_279_org, &Storm_279_my, reinterpret_cast< void** >( &Storm_279_ptr ) );
-	//MH_EnableHook( Storm_279_org );
-
 
 	pOnChatMessage_org = ( pOnChatMessage )( GameDll + pOnChatMessage_offset );
 	MH_CreateHook( pOnChatMessage_org, &pOnChatMessage_my, reinterpret_cast< void** >( &pOnChatMessage_ptr ) );
@@ -421,6 +419,8 @@ void InitHook( )
 	MH_CreateHook( DrawBarForUnit_org, &DrawBarForUnit_my, reinterpret_cast< void** >( &DrawBarForUnit_ptr ) );
 	MH_EnableHook( DrawBarForUnit_org );
 
+	MH_CreateHook( SimpleButtonClickEvent_org, &SimpleButtonClickEvent_my, reinterpret_cast< void** >( &SimpleButtonClickEvent_ptr ) );
+	MH_EnableHook( SimpleButtonClickEvent_org );
 
 
 
@@ -508,12 +508,6 @@ void UninitializeHook( )
 #endif
 
 
-	//if ( Storm_279_org )
-	//{
-	//	MH_DisableHook( Storm_279_org );
-	//	Storm_279_org = 0;
-	//}
-
 
 	if ( DrawInterface_org )
 	{
@@ -532,6 +526,12 @@ void UninitializeHook( )
 	{
 		MH_DisableHook( DrawBarForUnit_org );
 		DrawBarForUnit_org = NULL;
+	}
+
+	if ( SimpleButtonClickEvent_org )
+	{
+		MH_DisableHook( SimpleButtonClickEvent_org );
+		SimpleButtonClickEvent_org = NULL;
 	}
 
 	if ( Wc3DrawStage_org )
@@ -802,7 +802,7 @@ void __declspec( naked )  PrintAttackSpeedAndOtherInfoHook127a( )
 	}
 }
 
-float __stdcall GetMagicProtectionForHero( int UnitAddr )
+float __stdcall GetMagicProtectionForHero_org( int UnitAddr )
 {
 	float indmg = 100.0;
 	if ( UnitAddr > 0 )
@@ -828,11 +828,19 @@ float __stdcall GetMagicProtectionForHero( int UnitAddr )
 	return ( float )( 100.0 - indmg );
 }
 
+
+// Only for game. Int retval = fix missing eax
+int __stdcall GetMagicProtectionForHero( int UnitAddr )
+{
+	float retval = GetMagicProtectionForHero_org( UnitAddr );
+	return *( int* )&retval;
+}
+
 float __stdcall GetMagicProtectionForHero_by_abiladdr( int abil_addr )
 {
 	if ( abil_addr > 0 )
 	{
-		return GetMagicProtectionForHero( *( int* )( abil_addr + 0x30 ) );
+		return GetMagicProtectionForHero_org( *( int* )( abil_addr + 0x30 ) );
 	}
 	return 0.0f;
 }
@@ -924,9 +932,9 @@ unsigned int         PLAYER_COLOR_AQUA = 10;
 unsigned int         PLAYER_COLOR_BROWN = 11;
 
 
-const char * GetPlayerColorString( int player )
+const char * GetPlayerColorString2( int player )
 {
-	unsigned int c = GetPlayerColor( player );
+	unsigned int c = GetPlayerColor2( player );
 	if ( c == PLAYER_COLOR_RED )
 		return "|cffFF0202";
 	else if ( c == PLAYER_COLOR_BLUE )
@@ -970,8 +978,8 @@ int __stdcall SaveStringsForPrintItem( int itemaddr )
 			int itemowner = *( int* )( itemaddr + 0x74 );
 			if ( itemowner <= 15 && itemowner >= 0 )
 			{
-				sprintf_s( itemstr1, 128, "Owned by %s%s|r|n%%s%%s%%s%%s%%s", GetPlayerColorString( Player( itemowner ) ), GetPlayerName( itemowner, 0 ) );
-				sprintf_s( itemstr2, 128, "Owned by %s%s|r|n%%s%%s%%s", GetPlayerColorString( Player( itemowner ) ), GetPlayerName( itemowner, 0 ) );
+				sprintf_s( itemstr1, 128, "Owned by %s%s|r|n%%s%%s%%s%%s%%s", GetPlayerColorString2( Player( itemowner ) ), GetPlayerName( itemowner, 0 ) );
+				sprintf_s( itemstr2, 128, "Owned by %s%s|r|n%%s%%s%%s", GetPlayerColorString2( Player( itemowner ) ), GetPlayerName( itemowner, 0 ) );
 				return itemaddr;
 			}
 		}
@@ -1344,11 +1352,11 @@ void __stdcall SetCdForAddr( int cd_addr )
 			int pData2 = *( int* )( pData + 0xC );
 			if ( pData2 > 0 )
 			{
-				float val2 = *( float* )( pData + 0x40 );
+				float val2 = *( float* )( pData2 + 0x40 );
 				float val3 = val1 - val2;
 				if ( val3 > 100 )
 					*( float* )( cd_addr + 4 ) = 1000.0f;
-				else if ( val3 < 100 )
+				else
 					*( float* )( cd_addr + 4 ) = 100.0f;
 				return;
 			}
@@ -1498,8 +1506,8 @@ void __stdcall EnableFeatureOffsets( unsigned int FeatureFlag )
 				VirtualProtect( ( void* )temp.offaddr, 4, oldprotect, &oldprotect2 );
 				FlushInstructionCache( GetCurrentProcess( ), ( void* )temp.offaddr, 4 );
 			}
+		}
 	}
-}
 }
 
 void __stdcall RestoreAllOffsets( )
@@ -1686,8 +1694,8 @@ int __stdcall EnableFeatures( unsigned int Flags )
 		if ( DrawBarForUnit_org )
 		{
 			MH_EnableHook( DrawBarForUnit_org );
+		}
 	}
-}
 
 	return 0;
 }
@@ -1770,11 +1778,30 @@ void __stdcall DisableAllHooks( )
 	bDllLogEnable = TRUE;
 #endif
 	UninitOpenglHook( );
+#ifdef DOTA_HELPER_LOG
+	AddNewLineToDotaHelperLog( __func__, __LINE__ );
+	bDllLogEnable = TRUE;
+#endif
 	Uninitd3d8Hook( TRUE );
+#ifdef DOTA_HELPER_LOG
+	AddNewLineToDotaHelperLog( __func__, __LINE__ );
+	bDllLogEnable = TRUE;
+#endif
 	Uninitd3d9Hook( TRUE );
+#ifdef DOTA_HELPER_LOG
+	AddNewLineToDotaHelperLog( __func__, __LINE__ );
+	bDllLogEnable = TRUE;
+#endif
 	FreeAllIHelpers( );
+#ifdef DOTA_HELPER_LOG
+	AddNewLineToDotaHelperLog( __func__, __LINE__ );
+	bDllLogEnable = TRUE;
+#endif
 	FreeAllVectors( );
-
+#ifdef DOTA_HELPER_LOG
+	AddNewLineToDotaHelperLog( __func__, __LINE__ );
+	bDllLogEnable = TRUE;
+#endif
 	EnableSelectHelper = FALSE;
 	AutoSelectHero = FALSE;
 	BlockKeyAndMouseEmulation = FALSE;
@@ -1782,13 +1809,20 @@ void __stdcall DisableAllHooks( )
 	LOCK_MOUSE_IN_WINDOW = FALSE;
 	BlockKeyboardAndMouseWhenTeleport = FALSE;
 	rawimage_skipmouseevent = TRUE;
+#ifdef DOTA_HELPER_LOG
+	AddNewLineToDotaHelperLog( __func__, __LINE__ );
+	bDllLogEnable = TRUE;
+#endif
 	if ( !WhiteListForTeleport.empty( ) )
 		WhiteListForTeleport.clear( );
 	if ( !doubleclickSkillIDs.empty( ) )
 		doubleclickSkillIDs.clear( );
 	//	if ( !NeedDrawBarForUnit.empty( ) )
 	//		NeedDrawBarForUnit.clear( );
-
+#ifdef DOTA_HELPER_LOG
+	AddNewLineToDotaHelperLog( __func__, __LINE__ );
+	bDllLogEnable = TRUE;
+#endif
 	ShopHelperEnabled = FALSE;
 	TeleportShiftPress = FALSE;
 	SetWidescreenFixState( FALSE );
@@ -1800,11 +1834,21 @@ void __stdcall DisableAllHooks( )
 	ShowSkillPanelOnlyForHeroes = TRUE;
 	NeedReleaseUnusedMemory = FALSE;
 	PlayerEnemyCache.clear( );
+#ifdef DOTA_HELPER_LOG
+	AddNewLineToDotaHelperLog( __func__, __LINE__ );
+	bDllLogEnable = TRUE;
+#endif
 	InitFunctionCalled = FALSE;
 	SetCustomFovFix( 1.0f );
 #ifdef DOTA_HELPER_LOG
 	AddNewLineToDotaHelperLog( __func__, __LINE__ );
 #endif
+
+	FrameDefHelperUninitialize( );
+	if ( !ClickPortrainForIdList.empty( ) )
+		ClickPortrainForIdList.clear( );
+
+	UninitializePacketHandler( );
 }
 
 void * hRefreshTimer = 0;
@@ -1930,6 +1974,23 @@ DWORD GetDllCrc32( )
 	return dwCrc32;
 }
 
+DWORD __stdcall GetFileCrc32( char * file )
+{
+	DWORD dwCrc32;
+	CCrc32Dynamic *pobCrc32Dynamic = new CCrc32Dynamic;
+	pobCrc32Dynamic->Init( );
+	pobCrc32Dynamic->FileCrc32Assembly( file, dwCrc32 );
+	pobCrc32Dynamic->Free( );
+	delete pobCrc32Dynamic;
+	return dwCrc32;
+}
+
+BOOL __stdcall DeleteFileByName( char * file )
+{
+	return DeleteFileA( file );
+}
+
+
 
 int __stdcall InitHpBar( int )
 {
@@ -1969,7 +2030,7 @@ int __stdcall InitOverlay( int )
 		Initd3d9Hook( );
 	}
 	return 0;
-	}
+}
 BOOL InitFunctionCalled = FALSE;
 
 
@@ -1987,6 +2048,9 @@ unsigned int __stdcall InitDotaHelper( int gameversion )
 		TerminateThread( hRefreshTimer, 0 );
 		CloseHandle( hRefreshTimer );
 	}
+
+	DisableAllHooks( );
+
 	//RemoveMapSizeLimit( );
 	GameVersion = gameversion;
 
@@ -2009,7 +2073,7 @@ unsigned int __stdcall InitDotaHelper( int gameversion )
 	memset( hpbarscaleTowerY, 0, sizeof( hpbarscaleTowerY ) );
 
 	if ( Warcraft3Window )
-		KillTimer( Warcraft3Window, 'dota' );
+		KillTimer( Warcraft3Window, 'atod' );
 
 	Warcraft3Window = 0;
 	EnableSelectHelper = FALSE;
@@ -2075,13 +2139,13 @@ unsigned int __stdcall InitDotaHelper( int gameversion )
 		InGame = ( BOOL * )( GameDll + 0xAB62A4 );
 		GetItemInSlotAddr = GameDll + 0x3C7730 + 0xA;
 		GetItemTypeId = ( pGetItemTypeId )( GameDll + 0x3C4C60 );
-		GetPlayerColor = ( pGetPlayerColor )( GameDll + 0x3C1240 );
+		GetPlayerColor2 = ( pGetPlayerColor )( GameDll + 0x3C1240 );
 		_Player = ( pPlayer )( GameDll + 0x3BBB30 );
 		GetPlayerName = ( p_GetPlayerName )( GameDll + 0x2F8F90 );
 		_BarVTable = GameDll + 0x93E604;
 		IsWindowActive = ( BOOL * )( GameDll + 0xA9E7A4 );
 		ChatFound = GameDll + 0xAD15F0;
-		//TriggerExecute = ( _TriggerExecute ) ( GameDll + 0x3C3F40 );
+		TriggerExecute = ( _TriggerExecute )( GameDll + 0x3C3F40 );
 		ExecuteFunc = ( pExecuteFunc )( GameDll + 0x3D3F30 );
 		StormErrorHandlerOffset = StormDll + 0x28F0;
 		JassNativeLookupOffset = GameDll + 0x45D070;
@@ -2112,9 +2176,6 @@ unsigned int __stdcall InitDotaHelper( int gameversion )
 		AddNewLineToDotaHelperLog( __func__, __LINE__ );
 #endif
 
-		Storm_401_org = ( Storm_401 )( int )GetProcAddress( StormDllModule, ( LPCSTR )401 );
-		Storm_403_org = ( Storm_403 )( int )GetProcAddress( StormDllModule, ( LPCSTR )403 );
-		//Storm_279_org = ( Storm_279 )( int )GetProcAddress( StormDllModule, ( LPCSTR )279 );
 
 
 #ifdef DOTA_HELPER_LOG
@@ -2123,9 +2184,6 @@ unsigned int __stdcall InitDotaHelper( int gameversion )
 
 		GameFrameAtMouseStructOffset = GameDll + 0xA9A444;
 
-
-		PacketClassPtr = GameDll + 0x932D2C;
-		pGAME_SendPacket = GameDll + 0x54D970;
 
 		int pDrawAttackSpeed = GameDll + 0x339150;
 		AddNewOffset_( pDrawAttackSpeed, *( int* )pDrawAttackSpeed, Feature_AttackSpeed );
@@ -2219,7 +2277,8 @@ unsigned int __stdcall InitDotaHelper( int gameversion )
 
 		InitHpBar( 0 );
 
-		SimpleButtonClickEvent = ( c_SimpleButtonClickEvent )( GameDll + 0x603440 );
+		SimpleButtonClickEvent_org = ( c_SimpleButtonClickEvent )( GameDll + 0x603440 );
+		CommandButtonVtable = GameDll + 0x93EBC4;
 
 
 		MapNameOffset1 = GameDll + 0xAAE788;
@@ -2290,7 +2349,7 @@ unsigned int __stdcall InitDotaHelper( int gameversion )
 
 		ShowFrameAlternative = ( pShowFrameAlternative )( GameDll + 0x606770 );
 		GetFrameItemAddress = ( pGetFrameItemAddress )( GameDll + 0x5FA970 );
-		str2jstr = ( pConvertStrToJassStr )( GameDll + 0x11300 );
+		str2jstr = ( pConvertStrToJassStr )( GameDll + 0x4C5CF0 );//old 0x11300
 
 		UpdateFrameFlags = ( pUpdateFrameFlags )( GameDll + 0x602370 );
 		pCurrentFrameFocusedAddr = GameDll + 0xACE67C;
@@ -2306,13 +2365,12 @@ unsigned int __stdcall InitDotaHelper( int gameversion )
 
 		DrawInterface_org = ( DrawInterface_p )( GameDll + 0x341740 );
 		GetTownUnitCount_org = ( GetTownUnitCount_p )( GameDll + 0x2DD0C0 );
-		Ordinal590_org = ( Ordinal590_p )( int )GetProcAddress( StormDllModule, ( LPCSTR )590 );
 
 
 		Wc3DrawStage_org = ( Wc3DrawStage )( GameDll + 0x395620 );
 
 		if ( Warcraft3Window )
-			SetTimer( Warcraft3Window, 'dota', 20, 0 );
+			SetTimer( Warcraft3Window, 'atod', 20, 0 );
 
 
 #ifdef DOTA_HELPER_LOG
@@ -2350,10 +2408,17 @@ unsigned int __stdcall InitDotaHelper( int gameversion )
 #endif
 
 		InitFunctionCalled = TRUE;
+
+
+		FrameDefHelperInitialize( );
+
+		InitializePacketHandler( gameversion );
+
 		return crc32;
-		}
+	}
 	else if ( gameversion == 0x27a )
 	{
+
 #ifdef DOTA_HELPER_LOG
 		AddNewLineToDotaHelperLog( __func__, __LINE__ );
 #endif
@@ -2386,13 +2451,13 @@ unsigned int __stdcall InitDotaHelper( int gameversion )
 		InGame = ( BOOL * )( GameDll + 0xBE6530 );
 		GetItemInSlotAddr = GameDll + 0x1FAF50 + 0xC;
 		GetItemTypeId = ( pGetItemTypeId )( GameDll + 0x1E2CC0 );
-		GetPlayerColor = ( pGetPlayerColor )( GameDll + 0x1E3CA0 );
+		GetPlayerColor2 = ( pGetPlayerColor )( GameDll + 0x1E3CA0 );
 		_Player = ( pPlayer )( GameDll + 0x1F1E70 );
 		GetPlayerName = ( p_GetPlayerName )( GameDll + 0x34F730 );
 		_BarVTable = GameDll + 0x98F52C;
 		IsWindowActive = ( BOOL * )( GameDll + 0xB673EC );
 		ChatFound = GameDll + 0xBDAA14;
-		//TriggerExecute = ( _TriggerExecute ) ( GameDll + 0x1F9100 );
+		TriggerExecute = ( _TriggerExecute )( GameDll + 0x1F9100 );
 		ExecuteFunc = ( pExecuteFunc )( GameDll + 0x1E0650 );
 		StormErrorHandlerOffset = StormDll + 0x8230;
 		JassNativeLookupOffset = GameDll + 0x7EF590;
@@ -2425,15 +2490,8 @@ unsigned int __stdcall InitDotaHelper( int gameversion )
 		AddNewLineToDotaHelperLog( __func__, __LINE__ );
 #endif
 
-		Storm_401_org = ( Storm_401 )( int )GetProcAddress( StormDllModule, ( LPCSTR )401 );
-		Storm_403_org = ( Storm_403 )( int )GetProcAddress( StormDllModule, ( LPCSTR )403 );
-		//Storm_279_org = ( Storm_279 )( int )GetProcAddress( StormDllModule, ( LPCSTR )279 );
-
 		GameFrameAtMouseStructOffset = GameDll + 0xB66318;
 
-
-		PacketClassPtr = GameDll + 0x973210;
-		pGAME_SendPacket = GameDll + 0x30F1B0;
 
 #ifdef DOTA_HELPER_LOG
 		AddNewLineToDotaHelperLog( __func__, __LINE__ );
@@ -2540,7 +2598,8 @@ unsigned int __stdcall InitDotaHelper( int gameversion )
 		InitHpBar( 0 );
 
 
-		SimpleButtonClickEvent = ( c_SimpleButtonClickEvent )( GameDll + 0x0BB560 );
+		SimpleButtonClickEvent_org = ( c_SimpleButtonClickEvent )( GameDll + 0x0BB560 );
+		CommandButtonVtable = GameDll + 0x98F6A8;
 
 
 		MapNameOffset1 = GameDll + 0xBEE150;
@@ -2608,7 +2667,7 @@ unsigned int __stdcall InitDotaHelper( int gameversion )
 		SetFramePos = ( pSetFramePos )( GameDll + 0x0BD830 );
 		ShowFrameAlternative = ( pShowFrameAlternative )( GameDll + 0x0BD8A0 );
 		GetFrameItemAddress = ( pGetFrameItemAddress )( GameDll + 0x09EF40 );
-		str2jstr = ( pConvertStrToJassStr )( GameDll + 0x51310 );
+		str2jstr = ( pConvertStrToJassStr )( GameDll + 0x51310 );//
 
 		UpdateFrameFlags = ( pUpdateFrameFlags )( GameDll + 0x0BEFD0 );
 		pCurrentFrameFocusedAddr = ( GameDll + 0xBB9D98 );
@@ -2624,12 +2683,11 @@ unsigned int __stdcall InitDotaHelper( int gameversion )
 
 		DrawInterface_org = ( DrawInterface_p )( GameDll + 0x3ACCF0 );
 		GetTownUnitCount_org = ( GetTownUnitCount_p )( GameDll + 0x890680 );
-		Ordinal590_org = ( Ordinal590_p )( int )GetProcAddress( StormDllModule, ( LPCSTR )590 );
 
 		Wc3DrawStage_org = ( Wc3DrawStage )( GameDll + 0x363020 );
 
 		if ( Warcraft3Window )
-			SetTimer( Warcraft3Window, 'dota', 20, 0 );
+			SetTimer( Warcraft3Window, 'atod', 20, 0 );
 
 
 #ifdef DOTA_HELPER_LOG
@@ -2648,7 +2706,7 @@ unsigned int __stdcall InitDotaHelper( int gameversion )
 		for ( int i = 0; i < 16; i++ )
 		{
 			player_real_cache[ i ] = _GetPlayerByNumber( i );
-	}
+		}
 
 
 		for ( int i = 0; i < 16; i++ )
@@ -2666,8 +2724,14 @@ unsigned int __stdcall InitDotaHelper( int gameversion )
 		AddNewLineToDotaHelperLog( __func__, __LINE__ );
 #endif
 		InitFunctionCalled = TRUE;
+
+
+		FrameDefHelperInitialize( );
+
+		InitializePacketHandler( gameversion );
+
 		return crc32;
-		}
+	}
 
 
 #ifdef DOTA_HELPER_LOG
@@ -2675,7 +2739,7 @@ unsigned int __stdcall InitDotaHelper( int gameversion )
 #endif
 
 	return 0;
-	}
+}
 
 int __stdcall UpdatePlayerCache( int )
 {
@@ -2708,8 +2772,6 @@ int __stdcall UpdatePlayerCache( int )
 }
 
 
-Storm_403 Storm_403_org = NULL;
-
 const char * GameDllName = "Game.dll";
 const char * StormDllName = "Storm.dll";
 
@@ -2721,15 +2783,13 @@ int __stdcall SetCustomGameDllandStormDLL( const char * _GameDllName, const char
 	GameDll = ( int )GameDllModule;
 
 	StormDllModule = GetModuleHandleA( _StormDllName );
+
+
+
 	if ( !StormDllModule )
 		return FALSE;
 	StormDll = ( int )StormDllModule;
-
-	Storm_401_org = ( Storm_401 )( int )GetProcAddress( StormDllModule, ( LPCSTR )401 );
-	Storm_403_org = ( Storm_403 )( int )GetProcAddress( StormDllModule, ( LPCSTR )403 );
-	Ordinal590_org = ( Ordinal590_p )( int )GetProcAddress( StormDllModule, ( LPCSTR )590 );
-
-	//Storm_279_org = ( Storm_279 )( int )GetProcAddress( StormDllModule, ( LPCSTR )279 );
+	Storm::Init( StormDllModule );
 
 	return 0;
 }
@@ -2821,6 +2881,7 @@ BOOL __stdcall DllMain( HINSTANCE Module, unsigned int reason, LPVOID )
 		GameDll = ( int )GameDllModule;
 		StormDllModule = GetModuleHandleA( StormDllName );
 		StormDll = ( int )StormDllModule;
+		Storm::Init( StormDllModule );
 
 		Warcraft3_Process = GetCurrentProcess( );
 		// NEXT 3 LINES ONLY FOR TEST !!!
@@ -2833,7 +2894,7 @@ BOOL __stdcall DllMain( HINSTANCE Module, unsigned int reason, LPVOID )
 	else if ( reason == DLL_PROCESS_DETACH )
 	{
 		if ( Warcraft3Window )
-			KillTimer( Warcraft3Window, 'dota' );
+			KillTimer( Warcraft3Window, 'atod' );
 
 		TerminateStarted = TRUE;
 
@@ -2845,7 +2906,7 @@ BOOL __stdcall DllMain( HINSTANCE Module, unsigned int reason, LPVOID )
 			CloseHandle( hRefreshTimer );
 		}
 
-		if ( !GetModuleHandleA( GameDllName ) || !GetModuleHandleA( StormDllName ) )
+		if ( !GetModuleHandleA( GameDllName ) || !GetModuleHandleA( StormDllName ) || !GetModuleHandleA( StormDllName ) )
 		{
 			// Unable to cleanup, need just terminate process :(
 			ExitProcess( 0 );
@@ -2855,7 +2916,7 @@ BOOL __stdcall DllMain( HINSTANCE Module, unsigned int reason, LPVOID )
 #ifdef DOTA_HELPER_LOG
 		// Unable to cleanup, need just terminate process :(
 		// I don't know why, but debug version can not be unload witout terminate process...
-		ExitProcess( 0 );
+		//ExitProcess( 0 );
 #endif
 
 
@@ -2903,7 +2964,7 @@ BOOL __stdcall DllMain( HINSTANCE Module, unsigned int reason, LPVOID )
 
 		ManaBarSwitch( FALSE );
 
-
+		MH_DisableHook( MH_ALL_HOOKS );
 		MH_Uninitialize( );
 	}
 	return TRUE;

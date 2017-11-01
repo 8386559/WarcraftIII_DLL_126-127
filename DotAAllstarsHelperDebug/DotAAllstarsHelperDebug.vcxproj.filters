@@ -20,9 +20,6 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\DotAAllstarsHelper\blpaletter.cpp">
-      <Filter>Src</Filter>
-    </ClCompile>
     <ClCompile Include="..\DotAAllstarsHelper\Crc32Dynamic.cpp">
       <Filter>Src</Filter>
     </ClCompile>
@@ -68,19 +65,10 @@
     <ClCompile Include="..\DotAAllstarsHelper\hash_64.cpp">
       <Filter>Src</Filter>
     </ClCompile>
-    <ClCompile Include="..\DotAAllstarsHelper\HttpClass.cpp">
-      <Filter>Src</Filter>
-    </ClCompile>
     <ClCompile Include="..\DotAAllstarsHelper\quantizer.cpp">
       <Filter>Src</Filter>
     </ClCompile>
-    <ClCompile Include="..\DotAAllstarsHelper\SendGamePacket.cpp">
-      <Filter>Src</Filter>
-    </ClCompile>
     <ClCompile Include="..\DotAAllstarsHelper\UnitAndItem.cpp">
-      <Filter>Src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\DotAAllstarsHelper\Jpeg.cpp">
       <Filter>Src</Filter>
     </ClCompile>
     <ClCompile Include="..\DotAAllstarsHelper\DotaHelperOverlayDirectx8.cpp">
@@ -101,11 +89,26 @@
     <ClCompile Include="..\DotAAllstarsHelper\DotaSyncScanner.cpp">
       <Filter>Src</Filter>
     </ClCompile>
+    <ClCompile Include="..\DotAAllstarsHelper\Storm.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\DotAAllstarsHelper\DotaFrameDefHelper.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\DotAAllstarsHelper\WarcraftFrameHelper.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\DotAAllstarsHelper\BlpReadWrite.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\DotAAllstarsHelper\DotaHttpHelper.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\DotAAllstarsHelper\MegaPacketHandler.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\DotAAllstarsHelper\blpaletter.h">
-      <Filter>Headers</Filter>
-    </ClInclude>
     <ClInclude Include="..\DotAAllstarsHelper\buffer.h">
       <Filter>Headers</Filter>
     </ClInclude>
@@ -136,10 +139,25 @@
     <ClInclude Include="resource.h">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="..\DotAAllstarsHelper\Jpeg.h">
+    <ClInclude Include="..\DotAAllstarsHelper\Structures.h">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="..\DotAAllstarsHelper\Structures.h">
+    <ClInclude Include="..\DotAAllstarsHelper\Storm.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\DotAAllstarsHelper\FunctionTemplate.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\DotAAllstarsHelper\fp_call.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\DotAAllstarsHelper\WarcraftFrameHelper.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\DotAAllstarsHelper\BlpReadWrite.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\DotAAllstarsHelper\MegaPacketHandler.h">
       <Filter>Headers</Filter>
     </ClInclude>
   </ItemGroup>

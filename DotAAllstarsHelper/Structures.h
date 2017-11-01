@@ -1,6 +1,5 @@
 
-#include <pshpack1.h>
-
+#pragma pack(push,1)
 
 
 enum class RawImageEventType : unsigned int
@@ -14,6 +13,12 @@ enum class RawImageEventType : unsigned int
 	ALL = 63U
 };
 
+
+struct ClickPortrainForId
+{
+	int abilid;
+	int keycode;
+};
 
 
 struct CustomHPBar
@@ -82,8 +87,8 @@ struct BarStruct
 	int _unk25;			// 84
 	int bartype;		// 88
 	int _unk26;			// 8C
-	int _unk27;			// 90
-	int _unk28;			// 94
+	int vis1;			// 90
+	int vis2;			// 94
 	float offset5;		// 98
 	float offset6;		// 9C
 	float offset7;		// 100
@@ -293,29 +298,36 @@ struct RawImageCallbackData
 	BOOL IsLeftButton;
 	int offsetx;
 	int offsety;
+	int RawImageCustomId;
 };
 
 struct RawImageStruct
 {
-	int RawImage;
-	int width;
-	int height;
-	Buffer img;
-	Buffer ingamebuffer;
-	BOOL ingame;
-	string filename;
-	BOOL used_for_overlay;
-	float overlay_x; // 0.0 1.0
-	float overlay_y; // 0.0 1.0
-	BOOL button;
-	void * textureaddr;
-	BOOL needResetTexture;
-	BOOL MouseCallback;
-	RCString MouseActionCallback;
-	BOOL IsMouseDown;
-	BOOL IsMouseEntered;
-	unsigned int events;
-	float overlay_x2;
+	int RawImage; // 0x0
+	int width;// 0x4
+	int height;// 0x8
+	StormBuffer img;// 0xc
+	StormBuffer ingamebuffer;// 0x10
+	BOOL ingame;// 0x14
+	string filename;// 0x18
+	BOOL used_for_overlay;// 0x1c
+	float overlay_x; // 0.0 1.0 // 0x20
+	float overlay_y; // 0.0 1.0 // 0x24
+	BOOL button; // 0x28 
+	void * textureaddr;// 0x2C
+	BOOL needResetTexture;// 0x30
+
+	BOOL MouseCallback; // 0x34
+
+	BOOL	MouserExecuteFuncCallback;
+	BOOL	PacketCallback;
+	RCString MouseActionCallback; // 0x38
+
+
+	BOOL IsMouseDown; // 0x3C
+	BOOL IsMouseEntered; // 0x40
+	unsigned int events;// 0x44
+	float overlay_x2; // 0x48
 	float overlay_y2;
 	float overlay_x0;
 	float overlay_y0;
@@ -324,12 +336,15 @@ struct RawImageStruct
 	DWORD SleepTime;
 	DWORD StartTimer;
 
+	int RawImageCustomId;
+
 	RawImageStruct( )
 	{
 		width = 0;
 		height = 0;
-		img = Buffer( );
-		ingamebuffer = Buffer( );
+		RawImageCustomId = 0;
+		img = StormBuffer( );
+		ingamebuffer = StormBuffer( );
 		ingame = FALSE;
 		filename = string( );
 		used_for_overlay = FALSE;
@@ -342,6 +357,8 @@ struct RawImageStruct
 		IsMouseEntered = FALSE;
 		MouseCallback = FALSE;
 		MouseActionCallback = RCString( );
+		MouserExecuteFuncCallback = FALSE;
+		PacketCallback = FALSE;
 		button = FALSE;
 		MoveTime1 = 0;
 		MoveTime2 = 0;
@@ -521,4 +538,5 @@ struct KeyActionStruct
 	BOOL IsRightClick;
 };
 
-#include <poppack.h>
+
+#pragma pack(pop)
